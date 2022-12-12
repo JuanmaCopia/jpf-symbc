@@ -2817,6 +2817,14 @@ public class PreProcessGraph {
 							//println ("[preprocess] Two vertices have equality and non equality inbetween them");
 							return false;
 						}
+						if (g.getEdges().contains(new EdgeGT("", v1, v2))) {
+							//println ("[preprocess] Two vertices have equality and non equality inbetween them");
+							return false;
+						}
+						if (g.getEdges().contains(new EdgeLT("", v1, v2))) {
+							//println ("[preprocess] Two vertices have equality and non equality inbetween them");
+							return false;
+						}
 						//println ("[preprocess] Merging " + v1.getName() + " and " + v2.getName());
 						boolean mergeResult = g.mergeVertices (v1, v2);
 						if (!mergeResult) {

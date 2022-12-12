@@ -505,6 +505,26 @@ public class SymbolicStringConstraintsGeneralToText {
 		StringExpression se_right = sc.right;
 		Vertex v1, v2;
 		switch (sc.comp) {
+		case GT:
+			leftGraph = convertToGraph (se_left);
+			rightGraph = convertToGraph (se_right);			
+			global_graph.mergeIn(leftGraph);
+			global_graph.mergeIn(rightGraph);
+			v1 = global_graph.findVertex(se_left.getName());
+			
+			v2 = global_graph.findVertex(se_right.getName());
+			global_graph.addEdge(v1, v2, new EdgeEqual("EdgeGT_" + v1.getName() + "=" + v2.getName(), v1, v2));
+			break;
+		case LT:
+			leftGraph = convertToGraph (se_left);
+			rightGraph = convertToGraph (se_right);			
+			global_graph.mergeIn(leftGraph);
+			global_graph.mergeIn(rightGraph);
+			v1 = global_graph.findVertex(se_left.getName());
+			
+			v2 = global_graph.findVertex(se_right.getName());
+			global_graph.addEdge(v1, v2, new EdgeEqual("EdgeLT_" + v1.getName() + "=" + v2.getName(), v1, v2));
+			break;
 		case EQUALS:
 			leftGraph = convertToGraph (se_left);
 			rightGraph = convertToGraph (se_right);			

@@ -56,6 +56,10 @@ package gov.nasa.jpf.symbc.string;
 
 		   EQ(" == ") { public StringComparator not() { return NE; }},
 		   NE(" != ") { public StringComparator not() { return EQ; }},
+		   GT(" > ") { public StringComparator not() { return LE; }},
+		   LT(" < ") { public StringComparator not() { return GE; }},
+		   GE(" >= ") { public StringComparator not() { return LT; }},
+		   LE(" <= ") { public StringComparator not() { return GT; }},
 		   EQUALS(" equals ")  { public StringComparator not() { return NOTEQUALS; }},
            NOTEQUALS(" notequals ")  { public StringComparator not() { return EQUALS; }},
 		   EQUALSIGNORECASE(" equalsignorecase ") { public StringComparator not() { return NOTEQUALSIGNORECASE; }},

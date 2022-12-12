@@ -203,6 +203,16 @@ public class SymbolicStringHandler {
 				handleLength(invInst, th);
 			} else if (shortName.equals("indexOf")) {
 				handleIndexOf(invInst, th);
+			} else if (shortName.equals("compareTo")) {
+				ChoiceGenerator<?> cg;
+				if (!th.isFirstStepInsn()) { // first time around
+					cg = new PCChoiceGenerator(-1, 1);
+					th.getVM().setNextChoiceGenerator(cg);
+					return invInst;
+				} else {
+					handleCompareTo(invInst, th);
+					return invInst.getNext(th);
+				}
 			} else if (shortName.equals("lastIndexOf")) {
 				handleLastIndexOf(invInst, th);
 			} else if (shortName.equals("charAt")) {
@@ -316,6 +326,115 @@ public class SymbolicStringHandler {
 		}
 
 	}
+	public void handleCompareTo(JVMInvokeInstruction invInst,  ThreadInfo th) {
+		StackFrame sf = th.getModifiableTopFrame();
+		StringExpression sym_v1 = (StringExpression) sf.getOperandAttr(0);
+		StringExpression sym_v2 = (StringExpression) sf.getOperandAttr(1);
+
+		if ((sym_v1 == null) & (sym_v2 == null)) {
+			throw new RuntimeException("ERROR: symbolic string method must have one symbolic operand: HandleCompareTo");
+		} else {
+			
+			ChoiceGenerator<?> cg = th.getVM().getChoiceGenerator();
+			cg = th.getVM().getChoiceGenerator();
+			assert (cg instanceof PCChoiceGenerator) : "expected PCChoiceGenerator, got: " + cg;
+			
+			int comparisonResult = (Integer) cg.getNextChoice();
+			
+			IntegerExpression result = new IntegerConstant(comparisonResult);
+
+			int s1 = sf.pop();
+			int s2 = sf.pop();
+			PathCondition pc;
+
+			// pc is updated with the pc stored in the choice generator above
+			// get the path condition from the
+			// previous choice generator of the same type
+
+			ChoiceGenerator<?> prev_cg = cg.getPreviousChoiceGenerator();
+			while (!((prev_cg == null) || (prev_cg instanceof PCChoiceGenerator))) {
+				prev_cg = prev_cg.getPreviousChoiceGenerator();
+			}
+
+			if (prev_cg == null) {
+				pc = new PathCondition();
+			} else {
+				pc = ((PCChoiceGenerator) prev_cg).getCurrentPC();
+			}
+
+			assert pc != null;
+			
+			
+			if (comparisonResult == -1) {
+				if (sym_v1 != null) {
+					if (sym_v2 != null) { // both are symbolic values
+						pc.spc._addDet(StringComparator.LT, sym_v1, sym_v2);
+					} else {
+						ElementInfo e2 = th.getElementInfo(s2);
+						String val = e2.asString();
+						pc.spc._addDet(StringComparator.LT, sym_v1, val);
+					}
+				} else {
+					ElementInfo e1 = th.getElementInfo(s1);
+					String val = e1.asString();
+					pc.spc._addDet(StringComparator.LT, val, sym_v2);
+				}
+				if (!pc.simplify()) {// not satisfiable
+					th.getVM().getSystemState().setIgnored(true);
+				} else {
+					// pc.solve();
+					((PCChoiceGenerator) cg).setCurrentPC(pc);
+					// System.out.println(((PCChoiceGenerator) cg).getCurrentPC());
+				}
+			} else if (comparisonResult == 0) {
+				if (sym_v1 != null) {
+					if (sym_v2 != null) { // both are symbolic values
+						pc.spc._addDet(StringComparator.EQUALS, sym_v1, sym_v2);
+					} else {
+						ElementInfo e2 = th.getElementInfo(s2);
+						String val = e2.asString();
+						pc.spc._addDet(StringComparator.EQUALS, sym_v1, val);
+
+					}
+				} else {
+					ElementInfo e1 = th.getElementInfo(s1);
+					String val = e1.asString();
+					pc.spc._addDet(StringComparator.EQUALS, val, sym_v2);
+				}
+				if (!pc.simplify()) {// not satisfiable
+					th.getVM().getSystemState().setIgnored(true);
+				} else {
+					((PCChoiceGenerator) cg).setCurrentPC(pc);
+				}
+			} else if (comparisonResult == 1) {
+				if (sym_v1 != null) {
+					if (sym_v2 != null) { // both are symbolic values
+						pc.spc._addDet(StringComparator.GT, sym_v1, sym_v2);
+					} else {
+						ElementInfo e2 = th.getElementInfo(s2);
+						String val = e2.asString();
+						pc.spc._addDet(StringComparator.GT, sym_v1, val);
+
+					}
+				} else {
+					ElementInfo e1 = th.getElementInfo(s1);
+					String val = e1.asString();
+					pc.spc._addDet(StringComparator.GT, val, sym_v2);
+				}
+				if (!pc.simplify()) {// not satisfiable
+					th.getVM().getSystemState().setIgnored(true);
+				} else {
+					((PCChoiceGenerator) cg).setCurrentPC(pc);
+				}
+			}
+			
+			sf.push(0, false);
+			assert result != null;
+			sf.setOperandAttr(result);
+			//sf.push(conditionValue ? 1 : 0, true);
+		}
+	}
+	
 
 	private boolean handleCharAt (JVMInvokeInstruction invInst, ThreadInfo th) {
 		StackFrame sf = th.getModifiableTopFrame();
