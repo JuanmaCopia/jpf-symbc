@@ -3,16 +3,16 @@
  * Administrator of the National Aeronautics and Space Administration.
  * All rights reserved.
  *
- * Symbolic Pathfinder (jpf-symbc) is licensed under the Apache License, 
+ * Symbolic Pathfinder (jpf-symbc) is licensed under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
  * in compliance with the License. You may obtain a copy of the License at
- * 
- *        http://www.apache.org/licenses/LICENSE-2.0. 
+ *
+ *        http://www.apache.org/licenses/LICENSE-2.0.
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and 
+ * See the License for the specific language governing permissions and
  * limitations under the License.
  */
 
@@ -37,19 +37,21 @@
 package gov.nasa.jpf.symbc.numeric;
 
 import java.util.HashMap;
-import java.util.HashSet;
 
 import gov.nasa.jpf.vm.IntChoiceGenerator;
 import gov.nasa.jpf.vm.choice.IntIntervalGenerator;
-
-
-
 
 public class PCChoiceGenerator extends IntIntervalGenerator {
 
 	//protected PathCondition[] PC;
 	protected HashMap<Integer, PathCondition> PC;
 	boolean isReverseOrder;
+
+	static long id = 0;
+
+	private static String generateID() {
+		return String.format("PCChoiceGenerator_%d", id++);
+	}
 
 	int offset; // to be used in the CFG
 	public int getOffset() { return offset;}
@@ -64,41 +66,54 @@ public class PCChoiceGenerator extends IntIntervalGenerator {
 		methodName = name;
 	}
 
-	@SuppressWarnings("deprecation")
-	public PCChoiceGenerator(int size) {
-		super(0, size - 1);
+	public PCChoiceGenerator(String id, int size) {
+		super(id, 0, size - 1);
 		PC = new HashMap<Integer, PathCondition>();
 		for(int i = 0; i < size; i++)
 			PC.put(i, new PathCondition());
 		isReverseOrder = false;
 	}
 	
-	public PCChoiceGenerator(int min, int max) {
-		this(min, max, 1);
+	public PCChoiceGenerator(int size) {
+		this(generateID(), size);
+	}
+
+	public PCChoiceGenerator(String id, int min, int max) {
+		this(id, min, max, 1);
 	}
 	
-	@SuppressWarnings("deprecation")
-	public PCChoiceGenerator(int min, int max, int delta) {
-		super(min, max, delta);
+	public PCChoiceGenerator(int min, int max) {
+		this(generateID(), min, max, 1);
+	}
+
+	public PCChoiceGenerator(String id, int min, int max, int delta) {
+		super(id, min, max, delta);
 		PC = new HashMap<Integer, PathCondition>();
 		for(int i = min; i <= max; i += delta)
 			PC.put(i, new PathCondition());
 		isReverseOrder = false;
 	}
 	
+	public PCChoiceGenerator(int min, int max, int delta) {
+		this(generateID(), min, max, delta);
+	}
+
 	/*
 	 * If reverseOrder is true, the PCChoiceGenerator
 	 * explores paths in the opposite order used by
 	 * the default constructor. If reverseOrder is false
 	 * the usual behavior is used.
 	 */
-	@SuppressWarnings("deprecation")
-	public PCChoiceGenerator(int size, boolean reverseOrder) {
-		super(0, size - 1, reverseOrder ? -1 : 1);
+	public PCChoiceGenerator(String id, int size, boolean reverseOrder) {
+		super(id, 0, size - 1, reverseOrder ? -1 : 1);
 		PC = new HashMap<Integer, PathCondition>();
 		for(int i = 0; i < size; i++)
 			PC.put(i, new PathCondition());
 		isReverseOrder = reverseOrder;
+	}
+	
+	public PCChoiceGenerator(int size, boolean reverseOrder) {
+		this(generateID(), size, reverseOrder);
 	}
 
 	public boolean isReverseOrder() {
@@ -115,7 +130,7 @@ public class PCChoiceGenerator extends IntIntervalGenerator {
 			PC.put(new Integer(choice),pc);
 
 		}
-	
+
 	// returns the PC constraints for the current choice
 	public PathCondition getCurrentPC() {
 		PathCondition pc;
