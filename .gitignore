@@ -9,5 +9,4 @@ tmp/*
 trace
 *.class
 *.orig
-*~
 *.DS_Store
