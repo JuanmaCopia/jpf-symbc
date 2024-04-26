@@ -108,6 +108,8 @@ public class SymbolicConstraintsGeneral {
             pb = new ProblemZ3BitVector();
         } else if (dp[0].equalsIgnoreCase("z3optimize")) {
             pb = new ProblemZ3Optimize();
+        } else if (dp[0].equalsIgnoreCase("cvc5")) {
+            pb = new ProblemCVC5();
         }
         // added option to have no-solving
         // as a result symbolic execution will explore an over-approximation of the
@@ -197,6 +199,8 @@ public class SymbolicConstraintsGeneral {
             ((ProblemZ3BitVector) pb).cleanup();
         } else if (pb instanceof ProblemZ3Optimize) {
             ((ProblemZ3Optimize) pb).cleanup();
+        } else if (pb instanceof ProblemCVC5) {
+            ((ProblemCVC5) pb).cleanup();
         }
     }
 

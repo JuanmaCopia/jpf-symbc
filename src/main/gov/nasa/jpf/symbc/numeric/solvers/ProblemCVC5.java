@@ -2,6 +2,7 @@ package gov.nasa.jpf.symbc.numeric.solvers;
 
 import java.math.BigInteger;
 
+import gov.nasa.jpf.symbc.SymbolicInstructionFactory;
 import io.github.cvc5.Solver;
 import io.github.cvc5.Sort;
 import io.github.cvc5.Term;
@@ -24,7 +25,7 @@ public class ProblemCVC5 extends ProblemGeneral {
 			e.printStackTrace();
 			throw new RuntimeException("## Error CVC5: Exception caught in CVC5 JNI: \n" + e);
 		}
-	    bitVectorLength = 32;
+	    bitVectorLength = SymbolicInstructionFactory.bvlength;
 	}
 
 	@Override
@@ -588,6 +589,10 @@ public class ProblemCVC5 extends ProblemGeneral {
 			e.printStackTrace();
 			throw new RuntimeException("## Error CVC5: Exception caught in CVC5 JNI: \n" + e);
 	    }
+	}
+
+	public void cleanup() {
+		solver.resetAssertions();
 	}
 
 }

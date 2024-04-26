@@ -47,6 +47,7 @@ import gov.nasa.jpf.symbc.arrays.SelectExpression;
 import gov.nasa.jpf.symbc.arrays.StoreExpression;
 import gov.nasa.jpf.symbc.numeric.solvers.IncrementalListener;
 import gov.nasa.jpf.symbc.numeric.solvers.IncrementalSolver;
+import gov.nasa.jpf.symbc.numeric.solvers.ProblemCVC5;
 import gov.nasa.jpf.symbc.numeric.solvers.ProblemCoral;
 import gov.nasa.jpf.symbc.numeric.solvers.ProblemGeneral;
 
@@ -101,7 +102,7 @@ public class PCParser {
       e_rightRef = ((BinaryLinearIntegerExpression)eRef).right;
     } else { // bin non lin expr
       if(pb instanceof ProblemCoral || pb instanceof ProblemZ3 || pb instanceof ProblemZ3Optimize || pb instanceof ProblemZ3BitVector ||
-          pb instanceof ProblemZ3Incremental || pb instanceof ProblemZ3BitVectorIncremental) {
+          pb instanceof ProblemZ3Incremental || pb instanceof ProblemZ3BitVectorIncremental || pb instanceof ProblemCVC5) {
         opRef = ((BinaryNonLinearIntegerExpression)eRef).op;
         e_leftRef = ((BinaryNonLinearIntegerExpression)eRef).left;
         e_rightRef = ((BinaryNonLinearIntegerExpression)eRef).right;
@@ -137,7 +138,7 @@ public class PCParser {
           return pb.mult(((IntegerConstant)e_rightRef).value,getExpression(e_leftRef));
         else {
           if(pb instanceof ProblemCoral || pb instanceof ProblemZ3|| pb instanceof ProblemZ3Optimize ||  pb instanceof ProblemZ3BitVector ||
-          pb instanceof ProblemZ3Incremental || pb instanceof ProblemZ3BitVectorIncremental)
+          pb instanceof ProblemZ3Incremental || pb instanceof ProblemZ3BitVectorIncremental || pb instanceof ProblemCVC5)
             return pb.mult(getExpression(e_leftRef),getExpression(e_rightRef));
           else
             throw new RuntimeException("## Error: Binary Non Linear Operation");
@@ -151,7 +152,7 @@ public class PCParser {
           return pb.div(getExpression(e_leftRef),((IntegerConstant)e_rightRef).value);
         else {
           if(pb instanceof ProblemCoral || pb instanceof ProblemZ3|| pb instanceof ProblemZ3Optimize || pb instanceof ProblemZ3BitVector ||
-          pb instanceof ProblemZ3Incremental || pb instanceof ProblemZ3BitVectorIncremental)
+          pb instanceof ProblemZ3Incremental || pb instanceof ProblemZ3BitVectorIncremental || pb instanceof ProblemCVC5)
             return pb.div(getExpression(e_leftRef),getExpression(e_rightRef));
           else
             throw new RuntimeException("## Error: Binary Non Linear Operation");
@@ -165,7 +166,7 @@ public class PCParser {
           return pb.rem(getExpression(e_leftRef),((IntegerConstant)e_rightRef).value);
         else {
           if(pb instanceof ProblemCoral || pb instanceof ProblemZ3|| pb instanceof ProblemZ3Optimize || pb instanceof ProblemZ3BitVector ||
-          pb instanceof ProblemZ3Incremental || pb instanceof ProblemZ3BitVectorIncremental)
+          pb instanceof ProblemZ3Incremental || pb instanceof ProblemZ3BitVectorIncremental || pb instanceof ProblemCVC5)
             return pb.rem(getExpression(e_leftRef),getExpression(e_rightRef));
           else
             throw new RuntimeException("## Error: Binary Non Linear Operation");
@@ -1130,7 +1131,7 @@ getExpression(stoex.value)), newae));
     }
     else {
       //System.out.println("## Warning: Non Linear Integer Constraint (only coral or z3 can handle it)" + cRef);
-      if(pb instanceof ProblemCoral || pb instanceof ProblemZ3|| pb instanceof ProblemZ3Optimize || pb instanceof ProblemZ3BitVector || pb instanceof ProblemZ3Incremental || pb instanceof ProblemZ3BitVectorIncremental)
+      if(pb instanceof ProblemCoral || pb instanceof ProblemZ3|| pb instanceof ProblemZ3Optimize || pb instanceof ProblemZ3BitVector || pb instanceof ProblemZ3Incremental || pb instanceof ProblemZ3BitVectorIncremental || pb instanceof ProblemCVC5)
         constraintResult= createDPNonLinearIntegerConstraint((NonLinearIntegerConstraint)cRef);
       else
         throw new RuntimeException("## Error: Non Linear Integer Constraint not handled " + cRef);
