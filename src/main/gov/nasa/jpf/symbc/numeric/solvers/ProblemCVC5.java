@@ -13,19 +13,21 @@ import io.github.cvc5.Pair;
 public class ProblemCVC5 extends ProblemGeneral {
 	
 	Solver solver;
+	Sort bitVectorSort;
 	int bitVectorLength;
 	
 	public ProblemCVC5() {
 		solver = new Solver();
 		solver.setOption("produce-models", "true");
 	    solver.setOption("produce-unsat-cores", "true");
+	    bitVectorLength = SymbolicInstructionFactory.bvlength;
 	    try {
 			solver.setLogic("ALL");
+			bitVectorSort = solver.mkBitVectorSort(bitVectorLength);
 		} catch (CVC5ApiException e) {
 			e.printStackTrace();
 			throw new RuntimeException("## Error CVC5: Exception caught in CVC5 JNI: \n" + e);
 		}
-	    bitVectorLength = SymbolicInstructionFactory.bvlength;
 	}
 
 	@Override
@@ -73,32 +75,32 @@ public class ProblemCVC5 extends ProblemGeneral {
 	private Term constructTerm(Kind op, long value, Object exp) {
 		Term term = (Term) exp;
 		try{
-			if (term.isBitVectorValue()) {
-				Kind bitVectorOP = toBitVectorOperator(op);
-				return solver.mkTerm(bitVectorOP, solver.mkBitVector(bitVectorLength, value), term);
-			} else if (term.isIntegerValue())
+			if (term.getSort().equals(solver.getIntegerSort())) {
 				return solver.mkTerm(op, solver.mkInteger(value), term);
-			else
-				throw new RuntimeException();
+			} else if (term.getSort().equals(bitVectorSort)) {
+				op = toBitVectorOperator(op);
+				return solver.mkTerm(op, solver.mkBitVector(bitVectorLength, value), term);
+			} else
+				throw new RuntimeException("Term sort is: " + term.getSort());
 		} catch (Exception e) {
 			e.printStackTrace();
-			throw new RuntimeException("## Error CVC5: Exception caught in CVC5 JNI: \n" + e);
+			throw new RuntimeException("## Error CVC5: " + op + "(long, Object) failed \n" + e);
 	    }
 	}
 	
 	private Term constructTerm(Kind op, Object exp, long value) {
 		Term term = (Term) exp;
 		try{
-			if (term.isBitVectorValue()) {
-				Kind bitVectorOP = toBitVectorOperator(op);
-				return solver.mkTerm(bitVectorOP, term, solver.mkBitVector(bitVectorLength, value));
-			} else if (term.isIntegerValue())
+			if (term.getSort().equals(solver.getIntegerSort())) {
 				return solver.mkTerm(op, term, solver.mkInteger(value));
-			else
-				throw new RuntimeException();
+			} else if (term.getSort().equals(bitVectorSort)) {
+				op = toBitVectorOperator(op);
+				return solver.mkTerm(op, term, solver.mkBitVector(bitVectorLength, value));
+			} else
+				throw new RuntimeException("Term sort is: " + term.getSort());
 		} catch (Exception e) {
 			e.printStackTrace();
-			throw new RuntimeException("## Error CVC5: Exception caught in CVC5 JNI: \n" + e);
+			throw new RuntimeException("## Error CVC5: " + op + "(Object, long) failed \n" + e);
 	    }
 	}
 
@@ -107,7 +109,7 @@ public class ProblemCVC5 extends ProblemGeneral {
 			return solver.mkTerm(op, (Term) exp1, (Term) exp2);
 		} catch (Exception e) {
 			e.printStackTrace();
-			throw new RuntimeException("## Error CVC5: Exception caught in CVC5 JNI: \n" + e);
+			throw new RuntimeException("## Error CVC5: " + op + "(Object, Object) failed \n" + e);
 	    }
 	}
 	
@@ -116,7 +118,7 @@ public class ProblemCVC5 extends ProblemGeneral {
 			return solver.mkTerm(op, solver.mkReal(Double.toString(value)), (Term) exp);
 		} catch (Exception e) {
 			e.printStackTrace();
-			throw new RuntimeException("## Error CVC5: Exception caught in CVC5 JNI: \n" + e);
+			throw new RuntimeException("## Error CVC5: " + op + "(double, Object) failed \n" + e);
 	    }
 	}
 	
@@ -125,7 +127,7 @@ public class ProblemCVC5 extends ProblemGeneral {
 			return solver.mkTerm(op, (Term) exp, solver.mkReal(Double.toString(value)));
 		} catch (Exception e) {
 			e.printStackTrace();
-			throw new RuntimeException("## Error CVC5: Exception caught in CVC5 JNI: \n" + e);
+			throw new RuntimeException("## Error CVC5: " + op + "(Object, double) failed \n" + e);
 	    }
 	}
 	
@@ -134,7 +136,7 @@ public class ProblemCVC5 extends ProblemGeneral {
 			return solver.mkTerm(Kind.NOT, (Term) exp);
 		} catch (Exception e) {
 			e.printStackTrace();
-			throw new RuntimeException("## Error CVC5: Exception caught in CVC5 JNI: \n" + e);
+			throw new RuntimeException("## Error CVC5: NegateTerm failed \n" + e);
 	    }
 	}
 	
