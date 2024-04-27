@@ -1,30 +1,84 @@
 package gov.nasa.jpf.symbc.numeric.solvers;
 
 import java.math.BigInteger;
+import java.util.HashMap;
 
 import io.github.cvc5.Solver;
 import io.github.cvc5.Sort;
 import io.github.cvc5.Term;
 import io.github.cvc5.CVC5ApiException;
+import io.github.cvc5.Context;
 import io.github.cvc5.Kind;
 import io.github.cvc5.Pair;
 
 public class ProblemCVC5 extends ProblemGeneral {
 	
+	private static class CVC5Wrapper {
+		
+		private static CVC5Wrapper instance = null;
+		
+		private Solver solver;
+		
+		private int numScopes;
+		
+
+		public static CVC5Wrapper getInstance() {
+			if (instance != null) {
+				return instance;
+			}
+			return instance = new CVC5Wrapper();
+		}
+
+		private CVC5Wrapper() {
+			solver = new Solver();
+			solver.setOption("produce-models", "true");
+		    //solver.setOption("produce-unsat-cores", "false");
+		    try {
+				//solver.setLogic("ALL");
+		    	solver.setLogic("QF_LIRA");
+			} catch (CVC5ApiException e) {
+				e.printStackTrace();
+				throw new RuntimeException("## Error CVC5: Exception caught in CVC5 JNI: \n" + e);
+			}
+		}
+
+		public Solver getSolver() {
+			return this.solver;
+		}
+		
+		public void push() {
+			assert solver != null;
+			try {
+				solver.push();
+			} catch (CVC5ApiException e) {
+				throw new RuntimeException("## Error CVC5: Exception caught in CVC5 JNI: \n" + e);
+			}
+			numScopes++;
+		}
+		
+		public void cleanup() {
+			if (numScopes > 0) {
+				try {
+					solver.pop(numScopes);
+				} catch (CVC5ApiException e) {
+					throw new RuntimeException("## Error CVC5: Exception caught in CVC5 JNI: \n" + e);
+				}
+			}
+			numScopes = 0;
+		}
+	
+	}
+	
 	Solver solver;
 	
 	public ProblemCVC5() {
-		solver = new Solver();
-		//solver.setOption("produce-models", "true");
-	    //solver.setOption("produce-unsat-cores", "false");
-	    try {
-			//solver.setLogic("ALL");
-	    	solver.setLogic("QF_LIRA");
-			solver.push();
-		} catch (CVC5ApiException e) {
-			e.printStackTrace();
-			throw new RuntimeException("## Error CVC5: Exception caught in CVC5 JNI: \n" + e);
-		}
+		CVC5Wrapper cvc5 = CVC5Wrapper.getInstance();
+		cvc5.push();
+		solver = cvc5.getSolver();
+	}
+	
+	public void cleanup() {
+		CVC5Wrapper.getInstance().cleanup();
 	}
 
 	@Override
@@ -557,15 +611,6 @@ public class ProblemCVC5 extends ProblemGeneral {
 			e.printStackTrace();
 			throw new RuntimeException("## Error CVC5: Exception caught in CVC5 JNI: \n" + e);
 	    }
-	}
-
-	public void cleanup() {
-		try {
-			solver.pop();
-		} catch (CVC5ApiException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
 	}
 
 }
