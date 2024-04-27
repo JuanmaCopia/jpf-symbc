@@ -46,6 +46,8 @@ import java.util.*;
 
 
 import com.microsoft.z3.*;
+import com.microsoft.z3.InterpolationContext;
+import com.microsoft.z3.InterpolationContext.ComputeInterpolantResult;
 
 import gov.nasa.jpf.symbc.SymbolicInstructionFactory;
 import symlib.Util;
@@ -59,6 +61,7 @@ public class ProblemZ3 extends ProblemGeneral {
   //we would likely encounter a linker error
 	private static class Z3Wrapper {
 		private Context ctx;
+		InterpolationContext ictx;
 		private Solver solver;
 
 		private static Z3Wrapper instance = null;
@@ -74,6 +77,7 @@ public class ProblemZ3 extends ProblemGeneral {
 			HashMap<String, String> cfg = new HashMap<String, String>();
 			cfg.put("model", "true");
 			ctx = new Context(cfg);
+			ictx = InterpolationContext.mkContext();
 			solver = ctx.mkSolver();
 			System.err.println("Using z3 version: " + Version.getString());
 		}
@@ -85,10 +89,40 @@ public class ProblemZ3 extends ProblemGeneral {
 		public Context getCtx() {
 			return this.ctx;
 		}
+		
+		public InterpolationContext getIctx() {
+			return this.ictx;
+		}
 	}
+	
+	public void testInterpolant() {
+		IntExpr a = ictx.mkIntConst("a");
+		IntExpr b = ictx.mkIntConst("b");
+		IntExpr c = ictx.mkIntConst("c");
+		IntExpr d = ictx.mkIntConst("d");
+		
+		
+		BoolExpr Aclause1 = ictx.mkEq(a, b);
+		BoolExpr Aclause2 = ictx.mkEq(a, c);
+		BoolExpr A = ictx.mkAnd(Aclause1, Aclause2);
+		
+		
+		BoolExpr Bclause1 = ictx.mkEq(b, d);
+		BoolExpr Bclause2 = ictx.mkNot(ictx.mkEq(c, d));
+		BoolExpr B = ictx.mkAnd(Bclause1, Bclause2);
+		
+		BoolExpr A_ = ictx.MkInterpolant(A);
+
+		Params params = ictx.mkParams();
+		
+		ComputeInterpolantResult result = ictx.ComputeInterpolant(ictx.mkAnd(A_, B), params);
+		System.err.print("\ninterpolant: " + Arrays.toString(result.interp));
+	}
+
 
 	private Solver solver;
 	private Context ctx;
+	private InterpolationContext ictx;
 
 	// Do we use the floating point theory or linear arithmetic over reals
 	private boolean useFpForReals = false;
@@ -97,8 +131,10 @@ public class ProblemZ3 extends ProblemGeneral {
 		Z3Wrapper z3 = Z3Wrapper.getInstance();
 		solver = z3.getSolver();
 		ctx = z3.getCtx();
+		ictx = z3.getIctx();
 		solver.push();
 		useFpForReals = SymbolicInstructionFactory.fp;
+		//testInterpolant();
 	}
 
 	public void cleanup() {
