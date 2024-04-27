@@ -38,6 +38,7 @@
 package gov.nasa.jpf.symbc.numeric.solvers;
 
 import java.io.PrintWriter;
+import com.microsoft.z3.Version;
 import java.util.*;
 
 //TODO: problem: we do not distinguish between ints and reals?
@@ -74,6 +75,7 @@ public class ProblemZ3 extends ProblemGeneral {
 			cfg.put("model", "true");
 			ctx = new Context(cfg);
 			solver = ctx.mkSolver();
+			System.err.println("Using z3 version: " + Version.getString());
 		}
 
 		public Solver getSolver() {
