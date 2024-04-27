@@ -2,25 +2,29 @@ package gov.nasa.jpf.symbc.numeric.solvers;
 
 import java.math.BigInteger;
 
-import io.github.cvc5.Solver;
-import io.github.cvc5.Sort;
-import io.github.cvc5.Term;
+import gov.nasa.jpf.symbc.SymbolicInstructionFactory;
 import io.github.cvc5.CVC5ApiException;
 import io.github.cvc5.Kind;
 import io.github.cvc5.Pair;
+import io.github.cvc5.Solver;
+import io.github.cvc5.Sort;
+import io.github.cvc5.Term;
 
-public class ProblemCVC5 extends ProblemGeneral {
-	
+public class ProblemCVC5BitVector extends ProblemGeneral {
+
 	Solver solver;
-	
-	public ProblemCVC5() {
+	Sort bitVectorSort;
+	int bitVectorLength;
+
+	public ProblemCVC5BitVector() {
 		solver = new Solver();
-		//solver.setOption("produce-models", "true");
-	    //solver.setOption("produce-unsat-cores", "false");
-	    try {
-			//solver.setLogic("ALL");
-	    	solver.setLogic("QF_LIRA");
+		// solver.setOption("produce-models", "true");
+		// solver.setOption("produce-unsat-cores", "false");
+		bitVectorLength = SymbolicInstructionFactory.bvlength;
+		try {
+			solver.setLogic("QF_BV");
 			solver.push();
+			bitVectorSort = solver.mkBitVectorSort(bitVectorLength);
 		} catch (CVC5ApiException e) {
 			e.printStackTrace();
 			throw new RuntimeException("## Error CVC5: Exception caught in CVC5 JNI: \n" + e);
@@ -29,114 +33,145 @@ public class ProblemCVC5 extends ProblemGeneral {
 
 	@Override
 	public Object makeIntVar(String name, long min, long max) {
-		try{
-			Sort intSort = solver.getIntegerSort();
-			Term intVar = solver.mkConst(intSort, name);
-//			solver.assertFormula((Term) geq(intVar, min));
-//			solver.assertFormula((Term) leq(intVar, max));
-			return intVar;
+		try {
+			Term bvVar = solver.mkConst(bitVectorSort, name);
+			return bvVar;
 		} catch (Exception e) {
 			e.printStackTrace();
 			throw new RuntimeException("## Error CVC5: Exception caught in CVC5 JNI: \n" + e);
-	    }
+		}
 	}
 
 	@Override
 	public Object makeRealVar(String name, double min, double max) {
-		try{
+		try {
 			Sort realSort = solver.getRealSort();
-			Term realVar = solver.mkConst(realSort, name);
-//			solver.assertFormula((Term) geq(realVar, min));
-//			solver.assertFormula((Term) leq(realVar, max));
-			return realVar;
+			return solver.mkConst(realSort, name);
 		} catch (Exception e) {
 			e.printStackTrace();
 			throw new RuntimeException("## Error CVC5: Exception caught in CVC5 JNI: \n" + e);
-	    }
+		}
 	}
-	
+
 	@Override
 	public Object makeIntConst(long value) {
-	    try{
-	    	return solver.mkInteger(value);
+		try {
+			return solver.mkInteger(value);
 		} catch (Exception e) {
 			e.printStackTrace();
 			throw new RuntimeException("## Error CVC5: Exception caught in CVC5 JNI: \n" + e);
-	    }
+		}
 	}
-	
+
 	@Override
-    public Object makeRealConst(double value) {
-		try{
+	public Object makeRealConst(double value) {
+		try {
 			return solver.mkReal(Double.toString(value));
 		} catch (Exception e) {
 			e.printStackTrace();
 			throw new RuntimeException("## Error CVC5: Exception caught in CVC5 JNI: \n" + e);
-	    }
-    }
-	
+		}
+	}
+
 	private Term constructTerm(Kind op, long value, Object exp) {
 		Term term = (Term) exp;
-		try{
+		try {
 			if (term.getSort().equals(solver.getIntegerSort())) {
 				return solver.mkTerm(op, solver.mkInteger(value), term);
+			} else if (term.getSort().equals(bitVectorSort)) {
+				op = toBitVectorOperator(op);
+				return solver.mkTerm(op, solver.mkBitVector(bitVectorLength, value), term);
 			} else
 				throw new RuntimeException("Term sort is: " + term.getSort());
 		} catch (Exception e) {
 			e.printStackTrace();
 			throw new RuntimeException("## Error CVC5: " + op + "(long, Object) failed \n" + e);
-	    }
+		}
 	}
-	
+
 	private Term constructTerm(Kind op, Object exp, long value) {
 		Term term = (Term) exp;
-		try{
+		try {
 			if (term.getSort().equals(solver.getIntegerSort())) {
 				return solver.mkTerm(op, term, solver.mkInteger(value));
+			} else if (term.getSort().equals(bitVectorSort)) {
+				op = toBitVectorOperator(op);
+				return solver.mkTerm(op, term, solver.mkBitVector(bitVectorLength, value));
 			} else
 				throw new RuntimeException("Term sort is: " + term.getSort());
 		} catch (Exception e) {
 			e.printStackTrace();
 			throw new RuntimeException("## Error CVC5: " + op + "(Object, long) failed \n" + e);
-	    }
+		}
 	}
 
 	private Object constructTerm(Kind op, Object exp1, Object exp2) {
-		try{
+		try {
 			return solver.mkTerm(op, (Term) exp1, (Term) exp2);
 		} catch (Exception e) {
 			e.printStackTrace();
 			throw new RuntimeException("## Error CVC5: " + op + "(Object, Object) failed \n" + e);
-	    }
+		}
 	}
-	
+
 	private Object constructTerm(Kind op, double value, Object exp) {
-		try{
+		try {
 			return solver.mkTerm(op, solver.mkReal(Double.toString(value)), (Term) exp);
 		} catch (Exception e) {
 			e.printStackTrace();
 			throw new RuntimeException("## Error CVC5: " + op + "(double, Object) failed \n" + e);
-	    }
+		}
 	}
-	
+
 	private Object constructTerm(Kind op, Object exp, double value) {
-		try{
+		try {
 			return solver.mkTerm(op, (Term) exp, solver.mkReal(Double.toString(value)));
 		} catch (Exception e) {
 			e.printStackTrace();
 			throw new RuntimeException("## Error CVC5: " + op + "(Object, double) failed \n" + e);
-	    }
+		}
 	}
-	
+
 	private Object negateTerm(Object exp) {
-		try{
+		try {
 			return solver.mkTerm(Kind.NOT, (Term) exp);
 		} catch (Exception e) {
 			e.printStackTrace();
 			throw new RuntimeException("## Error CVC5: NegateTerm failed \n" + e);
-	    }
+		}
 	}
-	
+
+	private Kind toBitVectorOperator(Kind op) {
+		switch (op) {
+			case NOT:
+				return Kind.BITVECTOR_NOT;
+			case LEQ:
+				return Kind.BITVECTOR_SLE;
+			case GEQ:
+				return Kind.BITVECTOR_SGE;
+			case LT:
+				return Kind.BITVECTOR_SLT;
+			case GT:
+				return Kind.BITVECTOR_SGT;
+			case ADD:
+				return Kind.BITVECTOR_ADD;
+			case SUB:
+				return Kind.BITVECTOR_SUB;
+			case MULT:
+				return Kind.BITVECTOR_MULT;
+			case DIVISION:
+				return Kind.BITVECTOR_SDIV;
+			case AND:
+				return Kind.BITVECTOR_AND;
+			case OR:
+				return Kind.BITVECTOR_OR;
+			case XOR:
+				return Kind.BITVECTOR_XOR;
+			default:
+				return op;
+		}
+	}
+
 	@Override
 	public Object eq(long value, Object exp) {
 		return constructTerm(Kind.EQUAL, value, exp);
@@ -161,7 +196,7 @@ public class ProblemCVC5 extends ProblemGeneral {
 	public Object eq(Object exp, double value) {
 		return constructTerm(Kind.EQUAL, exp, value);
 	}
-	
+
 	@Override
 	public Object neq(long value, Object exp) {
 		return negateTerm(eq(value, exp));
@@ -211,7 +246,7 @@ public class ProblemCVC5 extends ProblemGeneral {
 	public Object leq(Object exp, double value) {
 		return constructTerm(Kind.LEQ, exp, value);
 	}
-	
+
 	@Override
 	public Object geq(long value, Object exp) {
 		return constructTerm(Kind.GEQ, value, exp);
@@ -236,7 +271,7 @@ public class ProblemCVC5 extends ProblemGeneral {
 	public Object geq(Object exp, double value) {
 		return constructTerm(Kind.GEQ, exp, value);
 	}
-	
+
 	@Override
 	public Object lt(long value, Object exp) {
 		return constructTerm(Kind.LT, value, exp);
@@ -261,8 +296,7 @@ public class ProblemCVC5 extends ProblemGeneral {
 	public Object lt(Object exp, double value) {
 		return constructTerm(Kind.LT, exp, value);
 	}
-	
-	
+
 	@Override
 	public Object gt(long value, Object exp) {
 		return constructTerm(Kind.GT, value, exp);
@@ -312,7 +346,7 @@ public class ProblemCVC5 extends ProblemGeneral {
 	public Object plus(Object exp, double value) {
 		return constructTerm(Kind.ADD, exp, value);
 	}
-	
+
 	@Override
 	public Object minus(long value, Object exp) {
 		return constructTerm(Kind.SUB, value, exp);
@@ -337,7 +371,7 @@ public class ProblemCVC5 extends ProblemGeneral {
 	public Object minus(Object exp, double value) {
 		return constructTerm(Kind.SUB, exp, value);
 	}
-	
+
 	@Override
 	public Object mult(long value, Object exp) {
 		return constructTerm(Kind.MULT, value, exp);
@@ -365,17 +399,17 @@ public class ProblemCVC5 extends ProblemGeneral {
 
 	@Override
 	public Object div(long value, Object exp) {
-		return constructTerm(Kind.INTS_DIVISION, value, exp);
+		return constructTerm(Kind.DIVISION, value, exp);
 	}
 
 	@Override
 	public Object div(Object exp, long value) {
-		return constructTerm(Kind.INTS_DIVISION, exp, value);
+		return constructTerm(Kind.DIVISION, exp, value);
 	}
 
 	@Override
 	public Object div(Object exp1, Object exp2) {
-		return constructTerm(Kind.INTS_DIVISION, exp1, exp2);
+		return constructTerm(Kind.DIVISION, exp1, exp2);
 	}
 
 	@Override
@@ -387,110 +421,110 @@ public class ProblemCVC5 extends ProblemGeneral {
 	public Object div(Object exp, double value) {
 		return constructTerm(Kind.DIVISION, exp, value);
 	}
-	
+
 	@Override
 	public Object and(long value, Object exp) {
-		throw new RuntimeException("## Error not supported, move to CVC5BitVector \n");
+		return constructTerm(Kind.AND, value, exp);
 	}
 
 	@Override
 	public Object and(Object exp, long value) {
-		throw new RuntimeException("## Error not supported, move to CVC5BitVector \n");
+		return constructTerm(Kind.AND, exp, value);
 	}
 
 	@Override
 	public Object and(Object exp1, Object exp2) {
-		throw new RuntimeException("## Error not supported, move to CVC5BitVector \n");
+		return constructTerm(Kind.AND, exp1, exp2);
 	}
-	
+
 	@Override
 	public Object or(long value, Object exp) {
-		throw new RuntimeException("## Error not supported, move to CVC5BitVector \n");
+		return constructTerm(Kind.OR, value, exp);
 	}
 
 	@Override
 	public Object or(Object exp, long value) {
-		throw new RuntimeException("## Error not supported, move to CVC5BitVector \n");
+		return constructTerm(Kind.OR, exp, value);
 	}
 
 	@Override
 	public Object or(Object exp1, Object exp2) {
-		throw new RuntimeException("## Error not supported, move to CVC5BitVector \n");
+		return constructTerm(Kind.OR, exp1, exp2);
 	}
 
 	@Override
 	public Object xor(long value, Object exp) {
-		throw new RuntimeException("## Error not supported, move to CVC5BitVector \n");
+		return constructTerm(Kind.XOR, value, exp);
 	}
 
 	@Override
 	public Object xor(Object exp, long value) {
-		throw new RuntimeException("## Error not supported, move to CVC5BitVector \n");
+		return constructTerm(Kind.XOR, exp, value);
 	}
 
 	@Override
 	public Object xor(Object exp1, Object exp2) {
-		throw new RuntimeException("## Error not supported, move to CVC5BitVector \n");
+		return constructTerm(Kind.XOR, exp1, exp2);
 	}
 
 	@Override
 	public Object shiftL(long value, Object exp) {
-		throw new RuntimeException("## Error not supported, move to CVC5BitVector \n");
+		return constructTerm(Kind.BITVECTOR_SHL, value, exp);
 	}
 
 	@Override
 	public Object shiftL(Object exp, long value) {
-		throw new RuntimeException("## Error not supported, move to CVC5BitVector \n");
+		return constructTerm(Kind.BITVECTOR_SHL, exp, value);
 	}
 
 	@Override
 	public Object shiftL(Object exp1, Object exp2) {
-		throw new RuntimeException("## Error not supported, move to CVC5BitVector \n");
+		return constructTerm(Kind.BITVECTOR_SHL, exp1, exp2);
 	}
 
 	@Override
 	public Object shiftR(long value, Object exp) {
-		throw new RuntimeException("## Error not supported, move to CVC5BitVector \n");
+		return constructTerm(Kind.BITVECTOR_ASHR, value, exp);
 	}
 
 	@Override
 	public Object shiftR(Object exp, long value) {
-		throw new RuntimeException("## Error not supported, move to CVC5BitVector \n");
+		return constructTerm(Kind.BITVECTOR_ASHR, exp, value);
 	}
 
 	@Override
 	public Object shiftR(Object exp1, Object exp2) {
-		throw new RuntimeException("## Error not supported, move to CVC5BitVector \n");
+		return constructTerm(Kind.BITVECTOR_ASHR, exp1, exp2);
 	}
 
 	@Override
 	public Object shiftUR(long value, Object exp) {
-		throw new RuntimeException("## Error not supported, move to CVC5BitVector \n");
+		return constructTerm(Kind.BITVECTOR_LSHR, value, exp);
 	}
 
 	@Override
 	public Object shiftUR(Object exp, long value) {
-		throw new RuntimeException("## Error not supported, move to CVC5BitVector \n");
+		return constructTerm(Kind.BITVECTOR_LSHR, exp, value);
 	}
 
 	@Override
 	public Object shiftUR(Object exp1, Object exp2) {
-		throw new RuntimeException("## Error not supported, move to CVC5BitVector \n");
+		return constructTerm(Kind.BITVECTOR_LSHR, exp1, exp2);
 	}
-	
+
 	@Override
 	public Object rem(long value, Object exp) {
-		return constructTerm(Kind.INTS_MODULUS, value, exp);
+		return constructTerm(Kind.BITVECTOR_SREM, value, exp);
 	}
 
 	@Override
 	public Object rem(Object exp, long value) {
-		return constructTerm(Kind.INTS_MODULUS, exp, value);
+		return constructTerm(Kind.BITVECTOR_SREM, exp, value);
 	}
 
 	@Override
 	public Object rem(Object exp1, Object exp2) {
-		return constructTerm(Kind.INTS_MODULUS, exp1, exp2);
+		return constructTerm(Kind.BITVECTOR_SREM, exp1, exp2);
 	}
 
 	@Override
@@ -500,24 +534,24 @@ public class ProblemCVC5 extends ProblemGeneral {
 
 	@Override
 	public Boolean solve() {
-		try{
+		try {
 			return solver.checkSat().isSat();
 		} catch (Exception e) {
 			e.printStackTrace();
 			throw new RuntimeException("## Error CVC5: Exception caught in CVC5 JNI: \n" + e);
-	    }
+		}
 	}
-	
+
 	@Override
 	public void post(Object constraint) {
-		try{
+		try {
 			solver.assertFormula((Term) constraint);
 		} catch (Exception e) {
 			e.printStackTrace();
 			throw new RuntimeException("## Error CVC5: Exception caught in CVC5 JNI: \n" + e);
-	    }
+		}
 	}
-	
+
 	@Override
 	public void postLogicalOR(Object[] constraint) {
 		post(solver.mkTerm(Kind.OR, (Term[]) constraint));
@@ -535,7 +569,7 @@ public class ProblemCVC5 extends ProblemGeneral {
 
 	@Override
 	public double getRealValue(Object dpVar) {
-		try{
+		try {
 			Term value = solver.getValue((Term) dpVar);
 			Pair<BigInteger, BigInteger> rational = value.getRealValue();
 			BigInteger numerator = rational.first;
@@ -544,19 +578,19 @@ public class ProblemCVC5 extends ProblemGeneral {
 		} catch (Exception e) {
 			e.printStackTrace();
 			throw new RuntimeException("## Error CVC5: Exception caught in CVC5 JNI: \n" + e);
-	    }
+		}
 	}
 
 	@Override
 	public long getIntValue(Object dpVar) {
-		try{
+		try {
 			Term value = solver.getValue((Term) dpVar);
 			BigInteger intValue = value.getIntegerValue();
 			return intValue.longValue();
 		} catch (Exception e) {
 			e.printStackTrace();
 			throw new RuntimeException("## Error CVC5: Exception caught in CVC5 JNI: \n" + e);
-	    }
+		}
 	}
 
 	public void cleanup() {

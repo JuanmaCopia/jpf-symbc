@@ -82,8 +82,10 @@ public class SymbolicConstraintsGeneral {
             pb = new ProblemChoco();
         } else if (dp[0].equalsIgnoreCase("choco")) {
             pb = new ProblemChoco();
-            // } else if(dp[0].equalsIgnoreCase("choco2")){
-            // pb = new ProblemChoco2();
+        } else if (dp[0].equalsIgnoreCase("cvc5")) {
+            pb = new ProblemCVC5();
+        } else if (dp[0].equalsIgnoreCase("cvc5bitvector")) {
+            pb = new ProblemCVC5BitVector();
         } else if (dp[0].equalsIgnoreCase("coral")) {
             pb = new ProblemCoral();
         } else if (dp[0].equalsIgnoreCase("iasolver")) {
@@ -108,9 +110,7 @@ public class SymbolicConstraintsGeneral {
             pb = new ProblemZ3BitVector();
         } else if (dp[0].equalsIgnoreCase("z3optimize")) {
             pb = new ProblemZ3Optimize();
-        } else if (dp[0].equalsIgnoreCase("cvc5")) {
-            pb = new ProblemCVC5();
-        }
+        } 
         // added option to have no-solving
         // as a result symbolic execution will explore an over-approximation of the
         // program paths
@@ -189,7 +189,11 @@ public class SymbolicConstraintsGeneral {
     }
 
     public void cleanup() {
-        if (pb instanceof ProblemCVC3) {
+    	if (pb instanceof ProblemCVC5) {
+            ((ProblemCVC5) pb).cleanup();
+    	} else if (pb instanceof ProblemCVC5BitVector) {
+            ((ProblemCVC5BitVector) pb).cleanup();
+    	} else if (pb instanceof ProblemCVC3) {
             ((ProblemCVC3) pb).cleanup();
         } else if (pb instanceof ProblemCoral) {
             ((ProblemCoral) pb).cleanup();
@@ -199,8 +203,6 @@ public class SymbolicConstraintsGeneral {
             ((ProblemZ3BitVector) pb).cleanup();
         } else if (pb instanceof ProblemZ3Optimize) {
             ((ProblemZ3Optimize) pb).cleanup();
-        } else if (pb instanceof ProblemCVC5) {
-            ((ProblemCVC5) pb).cleanup();
         }
     }
 
