@@ -110,7 +110,9 @@ public class SymbolicConstraintsGeneral {
             pb = new ProblemZ3BitVector();
         } else if (dp[0].equalsIgnoreCase("z3optimize")) {
             pb = new ProblemZ3Optimize();
-        } 
+        } else if (dp[0].equalsIgnoreCase("iz3")) {
+            pb = new ProblemIZ3();
+        }  
         // added option to have no-solving
         // as a result symbolic execution will explore an over-approximation of the
         // program paths
@@ -199,6 +201,8 @@ public class SymbolicConstraintsGeneral {
             ((ProblemCoral) pb).cleanup();
         } else if (pb instanceof ProblemZ3) {
             ((ProblemZ3) pb).cleanup();
+        } else if (pb instanceof ProblemIZ3) {
+            ((ProblemIZ3) pb).cleanup();
         } else if (pb instanceof ProblemZ3BitVector) {
             ((ProblemZ3BitVector) pb).cleanup();
         } else if (pb instanceof ProblemZ3Optimize) {
