@@ -224,7 +224,7 @@ public class SymbolicConstraintsGeneral {
         if (isSatisfiable(pc)) {
 
             // compute solutions for real variables:
-            Set<Entry<SymbolicReal, Object>> sym_realvar_mappings = PCParser.symRealVar.entrySet();
+            Set<Entry<SymbolicReal, Object>> sym_realvar_mappings = PCParser.symRealToDPVar.entrySet();
             Iterator<Entry<SymbolicReal, Object>> i_real = sym_realvar_mappings.iterator();
             // first set inf / sup values
             // while(i_real.hasNext()) {
@@ -236,7 +236,7 @@ public class SymbolicConstraintsGeneral {
             // }
 
             try {
-                sym_realvar_mappings = PCParser.symRealVar.entrySet();
+                sym_realvar_mappings = PCParser.symRealToDPVar.entrySet();
                 i_real = sym_realvar_mappings.iterator();
                 while (i_real.hasNext()) {
                     Entry<SymbolicReal, Object> e = i_real.next();
@@ -245,11 +245,11 @@ public class SymbolicConstraintsGeneral {
                     pcVar.solution = pb.getRealValue(dpVar); // may be undefined: throws an exception
                 }
             } catch (Exception exp) {
-                this.catchBody(PCParser.symRealVar, pb, pc);
+                this.catchBody(PCParser.symRealToDPVar, pb, pc);
             } // end catch
 
             // compute solutions for integer variables
-            Set<Entry<SymbolicInteger, Object>> sym_intvar_mappings = PCParser.symIntegerVar.entrySet();
+            Set<Entry<SymbolicInteger, Object>> sym_intvar_mappings = PCParser.symIntegerToDPVar.entrySet();
             Iterator<Entry<SymbolicInteger, Object>> i_int = sym_intvar_mappings.iterator();
             // try {
             while (i_int.hasNext()) {
@@ -337,11 +337,11 @@ public class SymbolicConstraintsGeneral {
         if (isSatisfiable(pc)) {
 
             // compute solutions for real variables:
-            Set<Entry<SymbolicReal, Object>> sym_realvar_mappings = PCParser.symRealVar.entrySet();
+            Set<Entry<SymbolicReal, Object>> sym_realvar_mappings = PCParser.symRealToDPVar.entrySet();
             Iterator<Entry<SymbolicReal, Object>> i_real = sym_realvar_mappings.iterator();
 
             try {
-                sym_realvar_mappings = PCParser.symRealVar.entrySet();
+                sym_realvar_mappings = PCParser.symRealToDPVar.entrySet();
                 i_real = sym_realvar_mappings.iterator();
                 while (i_real.hasNext()) {
                     Entry<SymbolicReal, Object> e = i_real.next();
@@ -352,11 +352,11 @@ public class SymbolicConstraintsGeneral {
                     result.put(pcVar.getName(), e_value);
                 }
             } catch (Exception exp) {
-                this.catchBody(PCParser.symRealVar, pb, pc);
+                this.catchBody(PCParser.symRealToDPVar, pb, pc);
             }
 
             // compute solutions for integer variables
-            Set<Entry<SymbolicInteger, Object>> sym_intvar_mappings = PCParser.symIntegerVar.entrySet();
+            Set<Entry<SymbolicInteger, Object>> sym_intvar_mappings = PCParser.symIntegerToDPVar.entrySet();
             Iterator<Entry<SymbolicInteger, Object>> i_int = sym_intvar_mappings.iterator();
             // try {
             while (i_int.hasNext()) {

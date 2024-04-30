@@ -64,14 +64,13 @@ import gov.nasa.jpf.symbc.numeric.solvers.ProblemZ3Optimize;
 // parses PCs
 
 public class PCParser {
+
 	static ProblemGeneral pb;
-	static public Map<SymbolicReal, Object> symRealVar = new HashMap<SymbolicReal, Object>(); // a map between symbolic
-																								// real variables and DP
-																								// variables
-	static Map<SymbolicInteger, Object> symIntegerVar = new HashMap<SymbolicInteger, Object>(); // a map between
-																								// symbolic variables
-																								// and DP variables
-	// static Boolean result; // tells whether result is satisfiable or not
+	static public Map<SymbolicReal, Object> symRealToDPVar = new HashMap<>();
+	static Map<Object, SymbolicReal> dpVarToSymReal = new HashMap<>();
+	static Map<SymbolicInteger, Object> symIntegerToDPVar = new HashMap<>();
+	static Map<Object, SymbolicInteger> dpVarToSymInteger = new HashMap<>();
+
 	static int tempVars = 0; // Used to construct "or" clauses
 
 	// Converts IntegerExpression's into DP's IntExp's
@@ -80,11 +79,12 @@ public class PCParser {
 		assert !(eRef instanceof IntegerConstant);
 
 		if (eRef instanceof SymbolicInteger) {
-			Object dp_var = symIntegerVar.get(eRef);
+			Object dp_var = symIntegerToDPVar.get(eRef);
 			if (dp_var == null) {
 				dp_var = pb.makeIntVar(((SymbolicInteger) eRef).getName(), ((SymbolicInteger) eRef)._min,
 						((SymbolicInteger) eRef)._max);
-				symIntegerVar.put((SymbolicInteger) eRef, dp_var);
+				symIntegerToDPVar.put((SymbolicInteger) eRef, dp_var);
+				dpVarToSymInteger.put(dp_var, (SymbolicInteger) eRef);
 			}
 			return dp_var;
 		}
@@ -241,11 +241,12 @@ public class PCParser {
 		assert !(eRef instanceof RealConstant);
 
 		if (eRef instanceof SymbolicReal) {
-			Object dp_var = symRealVar.get(eRef);
+			Object dp_var = symRealToDPVar.get(eRef);
 			if (dp_var == null) {
 				dp_var = pb.makeRealVar(((SymbolicReal) eRef).getName(), ((SymbolicReal) eRef)._min,
 						((SymbolicReal) eRef)._max);
-				symRealVar.put((SymbolicReal) eRef, dp_var);
+				symRealToDPVar.put((SymbolicReal) eRef, dp_var);
+				dpVarToSymReal.put(dp_var, (SymbolicReal) eRef);
 			}
 			return dp_var;
 		}
@@ -359,14 +360,6 @@ public class PCParser {
 
 		throw new RuntimeException("## Error: Expression " + eRef);
 	}
-
-	// public Map<SymbolicReal, Object> getSymRealVar() {
-	// return symRealVar;
-	// }
-
-	// public Map<SymbolicInteger, Object> getSymIntegerVar() {
-	// return symIntegerVar;
-	// }
 
 	static public boolean createDPMixedConstraint(MixedConstraint cRef) { // TODO
 
@@ -1060,8 +1053,8 @@ public class PCParser {
 	public static ProblemGeneral parse(PathCondition pc, ProblemGeneral pbtosolve) {
 		pb = pbtosolve;
 
-		symRealVar = new HashMap<SymbolicReal, Object>();
-		symIntegerVar = new HashMap<SymbolicInteger, Object>();
+		symRealToDPVar = new HashMap<SymbolicReal, Object>();
+		symIntegerToDPVar = new HashMap<SymbolicInteger, Object>();
 		// result = null;
 		tempVars = 0;
 
