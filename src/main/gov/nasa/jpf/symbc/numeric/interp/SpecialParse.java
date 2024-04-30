@@ -35,12 +35,14 @@
 //DOCUMENTATION, IF PROVIDED, WILL CONFORM TO THE SUBJECT SOFTWARE.
 //
 
-package gov.nasa.jpf.symbc.numeric;
+package gov.nasa.jpf.symbc.numeric.interp;
 
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import com.microsoft.z3.BoolExpr;
 
 import gov.nasa.jpf.symbc.arrays.ArrayConstraint;
 import gov.nasa.jpf.symbc.arrays.ArrayExpression;
@@ -49,30 +51,110 @@ import gov.nasa.jpf.symbc.arrays.RealArrayConstraint;
 import gov.nasa.jpf.symbc.arrays.RealStoreExpression;
 import gov.nasa.jpf.symbc.arrays.SelectExpression;
 import gov.nasa.jpf.symbc.arrays.StoreExpression;
-import gov.nasa.jpf.symbc.numeric.solvers.IncrementalSolver;
-import gov.nasa.jpf.symbc.numeric.solvers.ProblemCVC5;
-import gov.nasa.jpf.symbc.numeric.solvers.ProblemCVC5BitVector;
-import gov.nasa.jpf.symbc.numeric.solvers.ProblemCoral;
-import gov.nasa.jpf.symbc.numeric.solvers.ProblemGeneral;
-import gov.nasa.jpf.symbc.numeric.solvers.ProblemIZ3;
-import gov.nasa.jpf.symbc.numeric.solvers.ProblemZ3;
-import gov.nasa.jpf.symbc.numeric.solvers.ProblemZ3BitVector;
-import gov.nasa.jpf.symbc.numeric.solvers.ProblemZ3BitVectorIncremental;
-import gov.nasa.jpf.symbc.numeric.solvers.ProblemZ3Incremental;
-import gov.nasa.jpf.symbc.numeric.solvers.ProblemZ3Optimize;
+import gov.nasa.jpf.symbc.numeric.BinaryLinearIntegerExpression;
+import gov.nasa.jpf.symbc.numeric.BinaryNonLinearIntegerExpression;
+import gov.nasa.jpf.symbc.numeric.BinaryRealExpression;
+import gov.nasa.jpf.symbc.numeric.Comparator;
+import gov.nasa.jpf.symbc.numeric.Constraint;
+import gov.nasa.jpf.symbc.numeric.IntegerConstant;
+import gov.nasa.jpf.symbc.numeric.IntegerExpression;
+import gov.nasa.jpf.symbc.numeric.LinearIntegerConstraint;
+import gov.nasa.jpf.symbc.numeric.LogicalORLinearIntegerConstraints;
+import gov.nasa.jpf.symbc.numeric.MathFunction;
+import gov.nasa.jpf.symbc.numeric.MathRealExpression;
+import gov.nasa.jpf.symbc.numeric.MinMax;
+import gov.nasa.jpf.symbc.numeric.MixedConstraint;
+import gov.nasa.jpf.symbc.numeric.NonLinearIntegerConstraint;
+import gov.nasa.jpf.symbc.numeric.Operator;
+import gov.nasa.jpf.symbc.numeric.PathCondition;
+import gov.nasa.jpf.symbc.numeric.RealConstant;
+import gov.nasa.jpf.symbc.numeric.RealConstraint;
+import gov.nasa.jpf.symbc.numeric.RealExpression;
+import gov.nasa.jpf.symbc.numeric.SymbolicInteger;
+import gov.nasa.jpf.symbc.numeric.SymbolicReal;
 
 // parses PCs
 
-public class PCParser {
+public class SpecialParse {
 
-	static ProblemGeneral pb;
-	static public Map<SymbolicReal, Object> symRealToDPVar = new HashMap<>();
-	static Map<SymbolicInteger, Object> symIntegerToDPVar = new HashMap<>();
+	InterpolantionSolver pb;
+	public Map<SymbolicReal, Object> symRealToDPVar;
+	Map<Object, SymbolicReal> dpVarToSymReal;
+	Map<SymbolicInteger, Object> symIntegerToDPVar;
+	Map<Object, SymbolicInteger> dpVarToSymInteger;
 
-	static int tempVars = 0; // Used to construct "or" clauses
+	int tempVars;
+
+	public SpecialParse(InterpolantionSolver solver) {
+		pb = solver;
+		symRealToDPVar = new HashMap<SymbolicReal, Object>();
+		dpVarToSymReal = new HashMap<Object, SymbolicReal>();
+		symIntegerToDPVar = new HashMap<SymbolicInteger, Object>();
+		dpVarToSymInteger = new HashMap<Object, SymbolicInteger>();
+		tempVars = 0;
+	}
+
+	public Object parse(PathCondition pc) {
+		Constraint cRef = pc.header;
+		while (cRef != null) {
+			if (addConstraint(cRef) == false) {
+				throw new RuntimeException("SpecialParser: Parsing error!");
+			}
+			cRef = cRef.and;
+		}
+
+		BoolExpr[] pcSolverRepresentation = (BoolExpr[]) pb.getConstraints();
+		pb.clearConstraints();
+
+		return pb.mkAnd(pcSolverRepresentation);
+	}
+
+	public Map<SymbolicInteger, Object> getSymbolicIntegerToDPMap() {
+		return symIntegerToDPVar;
+	}
+
+	public Map<SymbolicReal, Object> getSymbolicRealToDPMap() {
+		return symRealToDPVar;
+	}
+
+	public Map<Object, SymbolicInteger> getDPtoSymbolicIntegerMap() {
+		return dpVarToSymInteger;
+	}
+
+	public Map<Object, SymbolicReal> getDPtoSymbolicRealMap() {
+		return dpVarToSymReal;
+	}
+
+	private boolean addConstraint(Constraint cRef) {
+		boolean constraintResult = true;
+
+		if (cRef instanceof RealConstraint)
+			constraintResult = createDPRealConstraint((RealConstraint) cRef);// create choco real constraint
+		else if (cRef instanceof LinearIntegerConstraint)
+			constraintResult = createDPLinearIntegerConstraint((LinearIntegerConstraint) cRef);// create choco linear
+																								// integer constraint
+		else if (cRef instanceof MixedConstraint)
+			// System.out.println("Mixed Constraint");
+			constraintResult = createDPMixedConstraint((MixedConstraint) cRef);
+		else if (cRef instanceof LogicalORLinearIntegerConstraints) {
+			// if (!(pb instanceof ProblemChoco)) {
+			// throw new RuntimeException ("String solving only works with Choco for now");
+			// }
+			// System.out.println("[SymbolicConstraintsGeneral] reached");
+			constraintResult = createDPLinearOrIntegerConstraint((LogicalORLinearIntegerConstraints) cRef);
+
+		} else if (cRef instanceof ArrayConstraint) {
+			constraintResult = createArrayConstraint((ArrayConstraint) cRef);
+		} else if (cRef instanceof RealArrayConstraint) {
+			constraintResult = createRealArrayConstraint((RealArrayConstraint) cRef);
+		} else {
+			constraintResult = createDPNonLinearIntegerConstraint((NonLinearIntegerConstraint) cRef);
+		}
+		return constraintResult; // false -> not sat
+	}
 
 	// Converts IntegerExpression's into DP's IntExp's
-	static Object getExpression(IntegerExpression eRef) {
+	Object getExpression(IntegerExpression eRef) {
 		assert eRef != null;
 		assert !(eRef instanceof IntegerConstant);
 
@@ -82,6 +164,7 @@ public class PCParser {
 				dp_var = pb.makeIntVar(((SymbolicInteger) eRef).getName(), ((SymbolicInteger) eRef)._min,
 						((SymbolicInteger) eRef)._max);
 				symIntegerToDPVar.put((SymbolicInteger) eRef, dp_var);
+				dpVarToSymInteger.put(dp_var, (SymbolicInteger) eRef);
 			}
 			return dp_var;
 		}
@@ -91,19 +174,13 @@ public class PCParser {
 		IntegerExpression e_rightRef;
 
 		if (eRef instanceof BinaryLinearIntegerExpression) {
-			opRef = ((BinaryLinearIntegerExpression) eRef).op;
-			e_leftRef = ((BinaryLinearIntegerExpression) eRef).left;
-			e_rightRef = ((BinaryLinearIntegerExpression) eRef).right;
+			opRef = ((BinaryLinearIntegerExpression) eRef).getOp();
+			e_leftRef = ((BinaryLinearIntegerExpression) eRef).getLeft();
+			e_rightRef = ((BinaryLinearIntegerExpression) eRef).getRight();
 		} else { // bin non lin expr
-			if (pb instanceof ProblemCVC5 || pb instanceof ProblemCVC5BitVector || pb instanceof ProblemCoral
-					|| pb instanceof ProblemZ3 || pb instanceof ProblemIZ3 || pb instanceof ProblemZ3Optimize
-					|| pb instanceof ProblemZ3BitVector || pb instanceof ProblemZ3Incremental
-					|| pb instanceof ProblemZ3BitVectorIncremental) {
-				opRef = ((BinaryNonLinearIntegerExpression) eRef).op;
-				e_leftRef = ((BinaryNonLinearIntegerExpression) eRef).left;
-				e_rightRef = ((BinaryNonLinearIntegerExpression) eRef).right;
-			} else
-				throw new RuntimeException("## Error: Binary Non Linear Expression " + eRef);
+			opRef = ((BinaryNonLinearIntegerExpression) eRef).op;
+			e_leftRef = ((BinaryNonLinearIntegerExpression) eRef).left;
+			e_rightRef = ((BinaryNonLinearIntegerExpression) eRef).right;
 		}
 		switch (opRef) {
 		case PLUS:
@@ -132,13 +209,7 @@ public class PCParser {
 			else if (e_rightRef instanceof IntegerConstant)
 				return pb.mult(((IntegerConstant) e_rightRef).value, getExpression(e_leftRef));
 			else {
-				if (pb instanceof ProblemCVC5 || pb instanceof ProblemCVC5BitVector || pb instanceof ProblemCoral
-						|| pb instanceof ProblemZ3 || pb instanceof ProblemIZ3 || pb instanceof ProblemZ3Optimize
-						|| pb instanceof ProblemZ3BitVector || pb instanceof ProblemZ3Incremental
-						|| pb instanceof ProblemZ3BitVectorIncremental)
-					return pb.mult(getExpression(e_leftRef), getExpression(e_rightRef));
-				else
-					throw new RuntimeException("## Error: Binary Non Linear Operation");
+				return pb.mult(getExpression(e_leftRef), getExpression(e_rightRef));
 			}
 		case DIV:
 			if (e_leftRef instanceof IntegerConstant && e_rightRef instanceof IntegerConstant)
@@ -148,13 +219,7 @@ public class PCParser {
 			else if (e_rightRef instanceof IntegerConstant)
 				return pb.div(getExpression(e_leftRef), ((IntegerConstant) e_rightRef).value);
 			else {
-				if (pb instanceof ProblemCoral || pb instanceof ProblemZ3 || pb instanceof ProblemIZ3
-						|| pb instanceof ProblemZ3Optimize || pb instanceof ProblemZ3BitVector
-						|| pb instanceof ProblemZ3Incremental || pb instanceof ProblemZ3BitVectorIncremental
-						|| pb instanceof ProblemCVC5BitVector)
-					return pb.div(getExpression(e_leftRef), getExpression(e_rightRef));
-				else
-					throw new RuntimeException("## Error: Binary Non Linear Operation");
+				return pb.div(getExpression(e_leftRef), getExpression(e_rightRef));
 			}
 		case REM:
 			if (e_leftRef instanceof IntegerConstant && e_rightRef instanceof IntegerConstant)
@@ -164,13 +229,7 @@ public class PCParser {
 			else if (e_rightRef instanceof IntegerConstant)
 				return pb.rem(getExpression(e_leftRef), ((IntegerConstant) e_rightRef).value);
 			else {
-				if (pb instanceof ProblemCVC5 || pb instanceof ProblemCVC5BitVector || pb instanceof ProblemCoral
-						|| pb instanceof ProblemZ3 || pb instanceof ProblemIZ3 || pb instanceof ProblemZ3Optimize
-						|| pb instanceof ProblemZ3BitVector || pb instanceof ProblemZ3Incremental
-						|| pb instanceof ProblemZ3BitVectorIncremental || pb instanceof ProblemCVC5BitVector)
-					return pb.rem(getExpression(e_leftRef), getExpression(e_rightRef));
-				else
-					throw new RuntimeException("## Error: Binary Non Linear Operation");
+				return pb.rem(getExpression(e_leftRef), getExpression(e_rightRef));
 			}
 		case AND:
 			if (e_leftRef instanceof IntegerConstant && e_rightRef instanceof IntegerConstant)
@@ -233,7 +292,7 @@ public class PCParser {
 	}
 
 	// Converts RealExpression's into DP RealExp's
-	static Object getExpression(RealExpression eRef) {
+	Object getExpression(RealExpression eRef) {
 		assert eRef != null;
 		assert !(eRef instanceof RealConstant);
 
@@ -243,6 +302,7 @@ public class PCParser {
 				dp_var = pb.makeRealVar(((SymbolicReal) eRef).getName(), ((SymbolicReal) eRef)._min,
 						((SymbolicReal) eRef)._max);
 				symRealToDPVar.put((SymbolicReal) eRef, dp_var);
+				dpVarToSymReal.put(dp_var, (SymbolicReal) eRef);
 			}
 			return dp_var;
 		}
@@ -251,9 +311,9 @@ public class PCParser {
 			Operator opRef;
 			RealExpression e_leftRef;
 			RealExpression e_rightRef;
-			opRef = ((BinaryRealExpression) eRef).op;
-			e_leftRef = ((BinaryRealExpression) eRef).left;
-			e_rightRef = ((BinaryRealExpression) eRef).right;
+			opRef = ((BinaryRealExpression) eRef).getOp();
+			e_leftRef = ((BinaryRealExpression) eRef).getLeft();
+			e_rightRef = ((BinaryRealExpression) eRef).getRight();
 
 			switch (opRef) {
 			case PLUS:
@@ -357,7 +417,7 @@ public class PCParser {
 		throw new RuntimeException("## Error: Expression " + eRef);
 	}
 
-	static public boolean createDPMixedConstraint(MixedConstraint cRef) { // TODO
+	public boolean createDPMixedConstraint(MixedConstraint cRef) { // TODO
 
 		Comparator c_compRef = cRef.getComparator();
 		RealExpression c_leftRef = (RealExpression) cRef.getLeft();
@@ -393,7 +453,7 @@ public class PCParser {
 		return true;
 	}
 
-	static public boolean createDPRealConstraint(RealConstraint cRef) {
+	public boolean createDPRealConstraint(RealConstraint cRef) {
 
 		Comparator c_compRef = cRef.getComparator();
 		RealExpression c_leftRef = (RealExpression) cRef.getLeft();
@@ -483,7 +543,7 @@ public class PCParser {
 	}
 
 	// Added by Gideon, to handle CNF style constraints???
-	static public boolean createDPLinearOrIntegerConstraint(LogicalORLinearIntegerConstraints c) {
+	public boolean createDPLinearOrIntegerConstraint(LogicalORLinearIntegerConstraints c) {
 		List<Object> orList = new ArrayList<Object>();
 
 		for (LinearIntegerConstraint cRef : c.getList()) {
@@ -705,7 +765,7 @@ public class PCParser {
 
 	}
 
-	static public boolean createDPLinearIntegerConstraint(LinearIntegerConstraint cRef) {
+	public boolean createDPLinearIntegerConstraint(LinearIntegerConstraint cRef) {
 
 		Comparator c_compRef = cRef.getComparator();
 
@@ -795,7 +855,7 @@ public class PCParser {
 		return true;
 	}
 
-	static public boolean createDPNonLinearIntegerConstraint(NonLinearIntegerConstraint cRef) {
+	public boolean createDPNonLinearIntegerConstraint(NonLinearIntegerConstraint cRef) {
 
 		Comparator c_compRef = cRef.getComparator();
 
@@ -887,7 +947,7 @@ public class PCParser {
 	// static Map<String,Boolean> dpMap = new HashMap<String,Boolean>();
 
 	// Added by Aymeric to support symbolic Arrays
-	public static boolean createArrayConstraint(ArrayConstraint cRef) {
+	public boolean createArrayConstraint(ArrayConstraint cRef) {
 		Comparator c_compRef = cRef.getComparator();
 
 		SelectExpression selex = null;
@@ -967,7 +1027,7 @@ public class PCParser {
 		return true;
 	}
 
-	public static boolean createRealArrayConstraint(final RealArrayConstraint cRef) {
+	public boolean createRealArrayConstraint(final RealArrayConstraint cRef) {
 		final Comparator c_compRef = cRef.getComparator();
 
 		SelectExpression selex = null;
@@ -1037,99 +1097,4 @@ public class PCParser {
 		return true;
 	}
 
-	/**
-	 * Merges the given path condition with the given ProblemGeneral object (i.e.
-	 * the solver). Normally the merging means only adding the assertions from the
-	 * path condition to the solver's internal representation.
-	 * 
-	 * @param pc        PathCondition
-	 * @param pbtosolve ProblemGeneral
-	 * @return the merged ProblemGener al object; NULL if problem is unsat
-	 */
-	public static ProblemGeneral parse(PathCondition pc, ProblemGeneral pbtosolve) {
-		pb = pbtosolve;
-
-		symRealToDPVar = new HashMap<SymbolicReal, Object>();
-		symIntegerToDPVar = new HashMap<SymbolicInteger, Object>();
-		// result = null;
-		tempVars = 0;
-
-		Constraint cRef = pc.header;
-
-		if (pb instanceof IncrementalSolver) {
-			// If we use an incremental solver, then we push the context
-			// *before* adding the constraint header
-			// Corina: not needed as the push is done in the listener
-			// ((IncrementalSolver)pb).push();
-
-			// Note that for an incremental solver
-			// we only add the constraint header
-			if (addConstraint(cRef) == false) {
-				return null;
-			}
-		} else {
-			// For a non-incremental solver,
-			// we submit the *entire* pc to the solver
-			while (cRef != null) {
-				if (addConstraint(cRef) == false) {
-					return null;
-				}
-				cRef = cRef.and;
-			}
-		}
-
-		return pb;
-	}
-
-	private static boolean addConstraint(Constraint cRef) {
-		boolean constraintResult = true;
-
-		if (cRef instanceof RealConstraint)
-			constraintResult = createDPRealConstraint((RealConstraint) cRef);// create choco real constraint
-		else if (cRef instanceof LinearIntegerConstraint)
-			constraintResult = createDPLinearIntegerConstraint((LinearIntegerConstraint) cRef);// create choco linear
-																								// integer constraint
-		else if (cRef instanceof MixedConstraint)
-			// System.out.println("Mixed Constraint");
-			constraintResult = createDPMixedConstraint((MixedConstraint) cRef);
-		else if (cRef instanceof LogicalORLinearIntegerConstraints) {
-			// if (!(pb instanceof ProblemChoco)) {
-			// throw new RuntimeException ("String solving only works with Choco for now");
-			// }
-			// System.out.println("[SymbolicConstraintsGeneral] reached");
-			constraintResult = createDPLinearOrIntegerConstraint((LogicalORLinearIntegerConstraints) cRef);
-
-		} else if (cRef instanceof ArrayConstraint) {
-			if (pb instanceof ProblemZ3 || pb instanceof ProblemIZ3 || pb instanceof ProblemZ3Optimize
-					|| pb instanceof ProblemZ3Incremental || pb instanceof ProblemZ3BitVector
-					|| pb instanceof ProblemZ3BitVectorIncremental) {
-				constraintResult = createArrayConstraint((ArrayConstraint) cRef);
-			} else {
-				throw new RuntimeException(
-						"## Error : Array constraints only handled by z3. Try specifying a z3 instance as symbolic.dp");
-			}
-		} else if (cRef instanceof RealArrayConstraint) {
-			if (pb instanceof ProblemZ3 || pb instanceof ProblemIZ3 || pb instanceof ProblemZ3Optimize
-					|| pb instanceof ProblemZ3Incremental || pb instanceof ProblemZ3BitVector
-					|| pb instanceof ProblemZ3BitVectorIncremental) {
-				constraintResult = createRealArrayConstraint((RealArrayConstraint) cRef);
-			} else {
-				throw new RuntimeException(
-						"## Error : Array constraints only handled by z3. Try specifying a z3 instance as symbolic.dp");
-			}
-		} else {
-			// System.out.println("## Warning: Non Linear Integer Constraint (only coral or
-			// z3 can handle it)" + cRef);
-			if (pb instanceof ProblemCVC5 || pb instanceof ProblemCVC5BitVector || pb instanceof ProblemCoral
-					|| pb instanceof ProblemZ3 || pb instanceof ProblemIZ3 || pb instanceof ProblemZ3Optimize
-					|| pb instanceof ProblemZ3BitVector || pb instanceof ProblemZ3Incremental
-					|| pb instanceof ProblemZ3BitVectorIncremental || pb instanceof ProblemCVC5BitVector)
-				constraintResult = createDPNonLinearIntegerConstraint((NonLinearIntegerConstraint) cRef);
-			else
-				throw new RuntimeException("## Error: Non Linear Integer Constraint not handled " + cRef);
-		}
-
-		return constraintResult; // false -> not sat
-
-	}
 }

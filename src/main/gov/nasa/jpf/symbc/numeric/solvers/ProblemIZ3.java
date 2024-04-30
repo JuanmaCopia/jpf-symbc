@@ -37,8 +37,10 @@
 
 package gov.nasa.jpf.symbc.numeric.solvers;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.List;
 
 import com.microsoft.z3.ArithExpr;
 import com.microsoft.z3.ArrayExpr;
@@ -56,8 +58,9 @@ import com.microsoft.z3.Sort;
 import com.microsoft.z3.Status;
 
 import gov.nasa.jpf.symbc.SymbolicInstructionFactory;
+import gov.nasa.jpf.symbc.numeric.interp.InterpolantionSolver;
 
-public class ProblemIZ3 extends ProblemGeneral {
+public class ProblemIZ3 extends InterpolantionSolver {
 
 	private static class IZ3Wrapper {
 		private Solver solver;
@@ -105,16 +108,10 @@ public class ProblemIZ3 extends ProblemGeneral {
 		System.err.print("\ninterpolant: " + Arrays.toString(result.interp));
 	}
 
-	public static ComputeInterpolantResult calculateInterpolant(BoolExpr A, BoolExpr B) {
-		InterpolationContext ictx = IZ3Wrapper.getInstance().getCtx();
-		BoolExpr A_ = ictx.MkInterpolant(A);
-		Params params = ictx.mkParams();
-		ComputeInterpolantResult result = ictx.ComputeInterpolant(ictx.mkAnd(A_, B), params);
-		return result;
-	}
-
 	private Solver solver;
 	private InterpolationContext ctx;
+
+	List<BoolExpr> constraints;
 
 	private boolean useFpForReals = false;
 
@@ -122,9 +119,59 @@ public class ProblemIZ3 extends ProblemGeneral {
 		IZ3Wrapper iz3 = IZ3Wrapper.getInstance();
 		solver = iz3.getSolver();
 		ctx = iz3.getCtx();
+		constraints = new ArrayList<>();
 		solver.push();
 		useFpForReals = SymbolicInstructionFactory.fp;
-		testInterpolant();
+		// testInterpolant();
+	}
+
+	public ComputeInterpolantResult calculateInterpolant(Object A, Object B) {
+		BoolExpr formulaA = (BoolExpr) A;
+		BoolExpr formulaB = (BoolExpr) B;
+		InterpolationContext ictx = IZ3Wrapper.getInstance().getCtx();
+		BoolExpr A_ = ictx.MkInterpolant(formulaA);
+		Params params = ictx.mkParams();
+		ComputeInterpolantResult result = ictx.ComputeInterpolant(ictx.mkAnd(A_, formulaB), params);
+		return result;
+	}
+
+	public Object mkAnd(Object[] constraints) {
+		return ctx.mkAnd((BoolExpr[]) constraints);
+	}
+
+	public Boolean solve() {
+		try {
+			postAssertionsToSolver();
+			return Status.SATISFIABLE == solver.check();
+		} catch (Exception e) {
+			e.printStackTrace();
+			throw new RuntimeException("## Error Z3: " + e);
+		}
+	}
+
+	private void postAssertionsToSolver() {
+		for (BoolExpr expr : constraints) {
+			solver.add(expr);
+		}
+		constraints.clear();
+	}
+
+	public Object[] getConstraints() {
+		return constraints.toArray();
+	}
+
+	public void clearConstraints() {
+		constraints.clear();
+	}
+
+	public void post(Object constraint) {
+		try {
+			constraints.add((BoolExpr) constraint);
+			// solver.add((BoolExpr) constraint);
+		} catch (Exception e) {
+			e.printStackTrace();
+			throw new RuntimeException("## Error posting constraint to Z3 \n" + e);
+		}
 	}
 
 	public void cleanup() {
@@ -713,28 +760,6 @@ public class ProblemIZ3 extends ProblemGeneral {
 		} catch (Exception e) {
 			e.printStackTrace();
 			throw new RuntimeException("## Error Z3: Exception caught in Z3 JNI: \n" + e);
-		}
-	}
-
-	public Boolean solve() {
-		try {
-			if (Status.SATISFIABLE == solver.check()) {
-				return true;
-			} else {
-				return false;
-			}
-		} catch (Exception e) {
-			e.printStackTrace();
-			throw new RuntimeException("## Error Z3: " + e);
-		}
-	}
-
-	public void post(Object constraint) {
-		try {
-			solver.add((BoolExpr) constraint);
-		} catch (Exception e) {
-			e.printStackTrace();
-			throw new RuntimeException("## Error posting constraint to Z3 \n" + e);
 		}
 	}
 
