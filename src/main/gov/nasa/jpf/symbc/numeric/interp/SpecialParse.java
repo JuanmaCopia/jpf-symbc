@@ -94,7 +94,7 @@ public class SpecialParse {
 		tempVars = 0;
 	}
 
-	public Object parse(PathCondition pc) {
+	public BoolExpr parse(PathCondition pc) {
 		Constraint cRef = pc.header;
 		while (cRef != null) {
 			if (addConstraint(cRef) == false) {
@@ -103,7 +103,7 @@ public class SpecialParse {
 			cRef = cRef.and;
 		}
 
-		BoolExpr[] pcSolverRepresentation = (BoolExpr[]) pb.getConstraints();
+		List<BoolExpr> pcSolverRepresentation = pb.getConstraints();
 		pb.clearConstraints();
 
 		return pb.mkAnd(pcSolverRepresentation);

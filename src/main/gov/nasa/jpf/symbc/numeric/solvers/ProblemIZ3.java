@@ -125,7 +125,7 @@ public class ProblemIZ3 extends InterpolantionSolver {
 		// testInterpolant();
 	}
 
-	public ComputeInterpolantResult calculateInterpolant(Object A, Object B) {
+	public ComputeInterpolantResult calculateInterpolant(BoolExpr A, BoolExpr B) {
 		BoolExpr formulaA = (BoolExpr) A;
 		BoolExpr formulaB = (BoolExpr) B;
 		InterpolationContext ictx = IZ3Wrapper.getInstance().getCtx();
@@ -135,8 +135,12 @@ public class ProblemIZ3 extends InterpolantionSolver {
 		return result;
 	}
 
-	public Object mkAnd(Object[] constraints) {
-		return ctx.mkAnd((BoolExpr[]) constraints);
+	public BoolExpr mkAnd(List<BoolExpr> constraints) {
+		BoolExpr[] cons = new BoolExpr[constraints.size()];
+		for (int i = 0; i < constraints.size(); i++) {
+			cons[i] = constraints.get(i);
+		}
+		return ctx.mkAnd(cons);
 	}
 
 	public Boolean solve() {
@@ -156,8 +160,8 @@ public class ProblemIZ3 extends InterpolantionSolver {
 		constraints.clear();
 	}
 
-	public Object[] getConstraints() {
-		return constraints.toArray();
+	public List<BoolExpr> getConstraints() {
+		return new ArrayList<BoolExpr>(constraints);
 	}
 
 	public void clearConstraints() {
