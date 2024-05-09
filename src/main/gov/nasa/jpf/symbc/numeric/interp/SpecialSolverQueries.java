@@ -10,24 +10,24 @@ import gov.nasa.jpf.symbc.numeric.solvers.ProblemIZ3;
 
 public class SpecialSolverQueries {
 
-	public static PathCondition calculateInterpolant(PathCondition pc1, PathCondition pc2) {
-		ProblemIZ3 z3 = new ProblemIZ3();
-		SpecialParse sparser = new SpecialParse(z3);
+    public static PathCondition calculateInterpolant(PathCondition pc1, PathCondition pc2) {
+        ProblemIZ3 z3 = new ProblemIZ3();
+        SpecialParse sparser = new SpecialParse(z3);
 
-		BoolExpr formulaA = sparser.parse(pc1);
-		BoolExpr formulaB = sparser.parse(pc2);
+        BoolExpr formulaA = sparser.parse(pc1);
+        BoolExpr formulaB = sparser.parse(pc2);
 
-		ComputeInterpolantResult result = z3.calculateInterpolant(formulaA, formulaB);
-		BoolExpr[] interpolant = result.interp;
+        ComputeInterpolantResult result = z3.calculateInterpolant(formulaA, formulaB);
+        BoolExpr[] interpolant = result.interp;
 
-		System.err.println("============   Interpolant   ============\n");
-		System.err.println("Formula A: " + formulaA.toString());
-		System.err.println("Formula B: " + formulaB.toString());
+        System.err.println("=======================   Interpolant   ======================\n");
+        System.err.println("Formula A: " + formulaA.toString());
+        System.err.println("Formula B: " + formulaB.toString());
 
-		System.err.println("Interpolant: " + Arrays.toString(interpolant));
+        System.err.println("Interpolant: " + Arrays.toString(interpolant));
 
-		System.err.println("\n============   Interpolant   ============\n");
-		return null;
-	}
+        System.err.println("\n============================================================\n");
+        return null;
+    }
 
 }
