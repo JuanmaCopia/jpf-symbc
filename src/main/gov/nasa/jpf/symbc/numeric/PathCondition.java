@@ -37,8 +37,6 @@
 
 package gov.nasa.jpf.symbc.numeric;
 
-import za.ac.sun.cs.green.Instance;
-
 import java.util.HashMap;
 import java.util.Map;
 
@@ -48,21 +46,21 @@ import gov.nasa.jpf.symbc.arrays.ArrayExpression;
 import gov.nasa.jpf.symbc.arrays.InitExpression;
 import gov.nasa.jpf.symbc.arrays.RealArrayConstraint;
 import gov.nasa.jpf.symbc.arrays.RealStoreExpression;
-import gov.nasa.jpf.symbc.arrays.StoreExpression;
 import gov.nasa.jpf.symbc.arrays.SelectExpression;
+import gov.nasa.jpf.symbc.arrays.StoreExpression;
 import gov.nasa.jpf.symbc.concolic.PCAnalyzer;
 import gov.nasa.jpf.symbc.numeric.solvers.SolverTranslator;
-import gov.nasa.jpf.symbc.numeric.visitors.CollectVariableVisitor;
 import gov.nasa.jpf.symbc.string.StringPathCondition;
-import gov.nasa.jpf.symbc.concolic.*;
 import gov.nasa.jpf.vm.ChoiceGenerator;
 import gov.nasa.jpf.vm.MJIEnv;
 import gov.nasa.jpf.vm.VM;
+import za.ac.sun.cs.green.Instance;
 
 // path condition contains mixed constraints of integers and reals
 
 /**
- * YN: added solveWithValuation() from later verision (Yannic Noller <nolleryc@gmail.com>)
+ * YN: added solveWithValuation() from later verision (Yannic Noller
+ * <nolleryc@gmail.com>)
  */
 public class PathCondition implements Comparable<PathCondition> {
     public static boolean flagSolved = false;
@@ -113,44 +111,44 @@ public class PathCondition implements Comparable<PathCondition> {
         return pc_new;
     }
 
-    //Added by Aymeric
+    // Added by Aymeric
     public void _addDet(Comparator c, SelectExpression se, IntegerExpression ie) {
         Constraint t;
         flagSolved = false;
-        t  = new ArrayConstraint(se, c, ie);
+        t = new ArrayConstraint(se, c, ie);
         prependUnlessRepeated(t);
     }
 
-    //Added by Aymeric
+    // Added by Aymeric
     public void _addDet(Comparator c, StoreExpression se, ArrayExpression ae) {
         Constraint t;
         flagSolved = false;
-        t  = new ArrayConstraint(se, c, ae);
+        t = new ArrayConstraint(se, c, ae);
         prependUnlessRepeated(t);
     }
 
-    //Added by Aymeric
+    // Added by Aymeric
     public void _addDet(Comparator c, SelectExpression se, RealExpression re) {
         Constraint t;
         flagSolved = false;
-        t  = new RealArrayConstraint(se, c, re);
+        t = new RealArrayConstraint(se, c, re);
         prependUnlessRepeated(t);
     }
 
-    //Added by Aymeric
+    // Added by Aymeric
     public void _addDet(Comparator c, RealStoreExpression se, ArrayExpression ae) {
         Constraint t;
         flagSolved = false;
-        t  = new RealArrayConstraint(se, c, ae);
+        t = new RealArrayConstraint(se, c, ae);
         prependUnlessRepeated(t);
     }
 
-    //Added by Aymeric
+    // Added by Aymeric
     public void _initializeArray(InitExpression ie, ArrayExpression ae) {
-      Constraint t;
-      flagSolved = false;
-      t = new ArrayConstraint(ie, Comparator.EQ, ae);
-      prependUnlessRepeated(t);
+        Constraint t;
+        flagSolved = false;
+        t = new ArrayConstraint(ie, Comparator.EQ, ae);
+        prependUnlessRepeated(t);
     }
 
     // Added by Gideon
@@ -411,8 +409,9 @@ public class PathCondition implements Comparable<PathCondition> {
     }
 
     public String stringPC() {
-        //return "constraint # = " + count + ((header == null) ? "" : "\n" + header.stringPC());
-    	return ((header == null) ? "" : "\n" + header.stringPC());
+        // return "constraint # = " + count + ((header == null) ? "" : "\n" +
+        // header.stringPC());
+        return ((header == null) ? "" : "\n" + header.stringPC());
     }
 
     public String toString() {
@@ -428,14 +427,14 @@ public class PathCondition implements Comparable<PathCondition> {
         // specialization
         // + "\n" + spc.toString(); // TODO: to review
     }
-    
+
     public String prefix_notationPC4Z3() {
         return header.prefix_notationPC4Z3();
         // return ((header == null) ? "" : " " + header.toString()); -- for
         // specialization
         // + "\n" + spc.toString(); // TODO: to review
     }
-    
+
     public static PathCondition getPC(MJIEnv env) {
         VM vm = env.getVM();
         return getPC(vm);
@@ -460,8 +459,7 @@ public class PathCondition implements Comparable<PathCondition> {
      * Note: Technically, this routine is incomplete and should take the string path
      * condition stored in field {@code spc} into account.
      * 
-     * @param obj
-     *            the reference object with which to compare
+     * @param obj the reference object with which to compare
      * @return {@code true} if this object is the same as the obj argument;
      *         {@code false} otherwise.
      * @see java.lang.Object#equals(java.lang.Object)
@@ -496,8 +494,7 @@ public class PathCondition implements Comparable<PathCondition> {
      * equal, a lexicographic comparison is made between the constraints of the path
      * conditions.
      * 
-     * @param pc
-     *            the path condition to compare to
+     * @param pc the path condition to compare to
      * @return -1 if this path condition is less than the other, +1 if it is
      *         greater, and 0 if they are equal
      */
@@ -591,6 +588,18 @@ public class PathCondition implements Comparable<PathCondition> {
         solver.cleanup();
         PathCondition.flagSolved = true;
         return result;
+    }
+
+    /**
+     * Accepts a Path condition visitor. Passes the visitor to each of this Path
+     * condition constraints.
+     */
+    public void accept(ConstraintExpressionVisitor visitor) {
+        Constraint currentConstraint = this.header;
+        while (currentConstraint != null) {
+            currentConstraint.accept(visitor);
+            currentConstraint = currentConstraint.and;
+        }
     }
 
 }

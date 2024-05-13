@@ -1417,7 +1417,7 @@ public class ProblemCompare extends ProblemGeneral {
 		} catch(Exception exp) { //reproducing hack to get the value of undefined variables in choco (and possibly others)
 			//if constraint contains real variables, use choco hack to find them
 			if(realVars.size() > 0) {
-				Map<SymbolicReal,Object> realVarsChoco = extractProblemVars(PCParser.symRealVar,pbToCheck);
+				Map<SymbolicReal,Object> realVarsChoco = extractProblemVars(PCParser.symRealToDPVar,pbToCheck);
 				Map<SymbolicReal,Object> reprocessedRealVarsChoco = scg.catchBody(realVarsChoco,pb,p);
 
 				if(reprocessedRealVarsChoco != null) {

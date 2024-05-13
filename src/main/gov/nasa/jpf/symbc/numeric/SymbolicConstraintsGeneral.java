@@ -82,8 +82,10 @@ public class SymbolicConstraintsGeneral {
             pb = new ProblemChoco();
         } else if (dp[0].equalsIgnoreCase("choco")) {
             pb = new ProblemChoco();
-            // } else if(dp[0].equalsIgnoreCase("choco2")){
-            // pb = new ProblemChoco2();
+        } else if (dp[0].equalsIgnoreCase("cvc5")) {
+            pb = new ProblemCVC5();
+        } else if (dp[0].equalsIgnoreCase("cvc5bitvector")) {
+            pb = new ProblemCVC5BitVector();
         } else if (dp[0].equalsIgnoreCase("coral")) {
             pb = new ProblemCoral();
         } else if (dp[0].equalsIgnoreCase("iasolver")) {
@@ -108,7 +110,9 @@ public class SymbolicConstraintsGeneral {
             pb = new ProblemZ3BitVector();
         } else if (dp[0].equalsIgnoreCase("z3optimize")) {
             pb = new ProblemZ3Optimize();
-        }
+        } else if (dp[0].equalsIgnoreCase("iz3")) {
+            pb = new ProblemIZ3();
+        }  
         // added option to have no-solving
         // as a result symbolic execution will explore an over-approximation of the
         // program paths
@@ -187,12 +191,18 @@ public class SymbolicConstraintsGeneral {
     }
 
     public void cleanup() {
-        if (pb instanceof ProblemCVC3) {
+    	if (pb instanceof ProblemCVC5) {
+            ((ProblemCVC5) pb).cleanup();
+    	} else if (pb instanceof ProblemCVC5BitVector) {
+            ((ProblemCVC5BitVector) pb).cleanup();
+    	} else if (pb instanceof ProblemCVC3) {
             ((ProblemCVC3) pb).cleanup();
         } else if (pb instanceof ProblemCoral) {
             ((ProblemCoral) pb).cleanup();
         } else if (pb instanceof ProblemZ3) {
             ((ProblemZ3) pb).cleanup();
+        } else if (pb instanceof ProblemIZ3) {
+            ((ProblemIZ3) pb).cleanup();
         } else if (pb instanceof ProblemZ3BitVector) {
             ((ProblemZ3BitVector) pb).cleanup();
         } else if (pb instanceof ProblemZ3Optimize) {
@@ -214,7 +224,7 @@ public class SymbolicConstraintsGeneral {
         if (isSatisfiable(pc)) {
 
             // compute solutions for real variables:
-            Set<Entry<SymbolicReal, Object>> sym_realvar_mappings = PCParser.symRealVar.entrySet();
+            Set<Entry<SymbolicReal, Object>> sym_realvar_mappings = PCParser.symRealToDPVar.entrySet();
             Iterator<Entry<SymbolicReal, Object>> i_real = sym_realvar_mappings.iterator();
             // first set inf / sup values
             // while(i_real.hasNext()) {
@@ -226,7 +236,7 @@ public class SymbolicConstraintsGeneral {
             // }
 
             try {
-                sym_realvar_mappings = PCParser.symRealVar.entrySet();
+                sym_realvar_mappings = PCParser.symRealToDPVar.entrySet();
                 i_real = sym_realvar_mappings.iterator();
                 while (i_real.hasNext()) {
                     Entry<SymbolicReal, Object> e = i_real.next();
@@ -235,11 +245,11 @@ public class SymbolicConstraintsGeneral {
                     pcVar.solution = pb.getRealValue(dpVar); // may be undefined: throws an exception
                 }
             } catch (Exception exp) {
-                this.catchBody(PCParser.symRealVar, pb, pc);
+                this.catchBody(PCParser.symRealToDPVar, pb, pc);
             } // end catch
 
             // compute solutions for integer variables
-            Set<Entry<SymbolicInteger, Object>> sym_intvar_mappings = PCParser.symIntegerVar.entrySet();
+            Set<Entry<SymbolicInteger, Object>> sym_intvar_mappings = PCParser.symIntegerToDPVar.entrySet();
             Iterator<Entry<SymbolicInteger, Object>> i_int = sym_intvar_mappings.iterator();
             // try {
             while (i_int.hasNext()) {
@@ -327,11 +337,11 @@ public class SymbolicConstraintsGeneral {
         if (isSatisfiable(pc)) {
 
             // compute solutions for real variables:
-            Set<Entry<SymbolicReal, Object>> sym_realvar_mappings = PCParser.symRealVar.entrySet();
+            Set<Entry<SymbolicReal, Object>> sym_realvar_mappings = PCParser.symRealToDPVar.entrySet();
             Iterator<Entry<SymbolicReal, Object>> i_real = sym_realvar_mappings.iterator();
 
             try {
-                sym_realvar_mappings = PCParser.symRealVar.entrySet();
+                sym_realvar_mappings = PCParser.symRealToDPVar.entrySet();
                 i_real = sym_realvar_mappings.iterator();
                 while (i_real.hasNext()) {
                     Entry<SymbolicReal, Object> e = i_real.next();
@@ -342,11 +352,11 @@ public class SymbolicConstraintsGeneral {
                     result.put(pcVar.getName(), e_value);
                 }
             } catch (Exception exp) {
-                this.catchBody(PCParser.symRealVar, pb, pc);
+                this.catchBody(PCParser.symRealToDPVar, pb, pc);
             }
 
             // compute solutions for integer variables
-            Set<Entry<SymbolicInteger, Object>> sym_intvar_mappings = PCParser.symIntegerVar.entrySet();
+            Set<Entry<SymbolicInteger, Object>> sym_intvar_mappings = PCParser.symIntegerToDPVar.entrySet();
             Iterator<Entry<SymbolicInteger, Object>> i_int = sym_intvar_mappings.iterator();
             // try {
             while (i_int.hasNext()) {
